@@ -13,6 +13,7 @@ import { NotificationSystem } from "@/components/notification-system"
 import { FStore } from "@/components/fstore"
 import type { User } from "@/lib/types"
 import { storage } from "@/lib/store"
+import { supabase } from "@/lib/supabase"
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
@@ -25,8 +26,9 @@ export default function Home() {
     setIsLoading(false)
   }, [])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     storage.clearAll()
+    await supabase.auth.signOut()
     setUser(null)
   }
 
