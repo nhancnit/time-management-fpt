@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { FROG_EMOJIS, getRandomDialogue, type FrogMode } from "@/lib/frog-dialogues"
 import { storage } from "@/lib/store"
+import { supabase } from "@/lib/supabase"
 import { FSTORE_ITEMS } from "@/lib/fstore-data"
+import { toast } from "sonner"
+import { Sparkles } from "lucide-react"
 
 interface FrogMascotProps {
   mode?: FrogMode
@@ -27,6 +30,8 @@ export function FrogMascot({
   const [isShaking, setIsShaking] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [clickCount, setClickCount] = useState(0)
+  const [hasEasterEgg, setHasEasterEgg] = useState(false)
+  const [isClaiming, setIsClaiming] = useState(false)
   const [equippedItems, setEquippedItems] = useState<{
     body?: string
     accessory?: string
@@ -44,13 +49,36 @@ export function FrogMascot({
     }
   }, [])
 
-  // Initial scanning effect
+  // Initial scanning effect and Easter Egg logic 
   useEffect(() => {
     setIsScanning(true)
     const scanTimer = setTimeout(() => {
       setIsScanning(false)
       triggerDialogue("thanh_loc")
     }, 2000)
+
+    // Easter Egg Logic: 10% chance to have an Easter Egg today (persisted in localStorage to avoid re-rolling on refresh)
+    const today = new Date().toDateString()
+    const storedEasterEgg = localStorage.getItem('fpt_study_easter_egg_date')
+    const storedEasterEggClaimed = localStorage.getItem('fpt_study_easter_egg_claimed')
+
+    if (storedEasterEgg === today) {
+        if (storedEasterEggClaimed !== 'true') {
+           setHasEasterEgg(true)
+        }
+    } else {
+        // Roll for new Easter Egg
+        const hasEgg = Math.random() < 0.10 // 10% chance
+        if (hasEgg) {
+            setHasEasterEgg(true)
+            localStorage.setItem('fpt_study_easter_egg_date', today)
+            localStorage.setItem('fpt_study_easter_egg_claimed', 'false')
+        } else {
+            localStorage.setItem('fpt_study_easter_egg_date', today)
+            localStorage.setItem('fpt_study_easter_egg_claimed', 'true') // mark as claimed to ignore
+        }
+    }
+
     return () => clearTimeout(scanTimer)
   }, [])
 
@@ -73,7 +101,54 @@ export function FrogMascot({
     [externalMode, onModeChange],
   )
 
-  const handleClick = () => {
+  const handleClick = async () => {
+    if (hasEasterEgg && !isClaiming) {
+       setIsClaiming(true)
+       // random coin from 10 to 50
+       const bonus = Math.floor(Math.random() * 41) + 10 
+       
+       try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('f_coins')
+            .eq('id', session.user.id)
+            .single()
+
+          if (!fetchError && profile) {
+             const newTotal = (profile.f_coins || 0) + bonus
+             const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ f_coins: newTotal })
+              .eq('id', session.user.id)
+
+            if (!updateError) {
+               // success claim
+               setHasEasterEgg(false)
+               localStorage.setItem('fpt_study_easter_egg_claimed', 'true')
+
+               const fstoreToUpdate = storage.getFStore()
+               fstoreToUpdate.fCoins = newTotal
+               storage.setFStore(fstoreToUpdate)
+               
+               window.dispatchEvent(new Event('fcoins-updated'))
+
+               toast.success("🐸 Lộc xỉu Cóc Tạp Hóa!", {
+                  description: `Bạn vừa nhặt được +${bonus} F-Coins từ chú Cóc!`
+               })
+               triggerDialogue("slay")
+               setIsClaiming(false)
+               return
+            }
+          }
+        }
+       } catch (err) {
+         console.error("Easter egg claim failed", err)
+       }
+       setIsClaiming(false)
+    }
+
     setClickCount((prev) => prev + 1)
 
     // After 3 clicks, activate gia_truong mode
@@ -252,6 +327,13 @@ export function FrogMascot({
           {mode === "tam_linh" && "🔮"}
           {mode === "hoang_loan" && "🔥"}
         </div>
+
+        {/* Easter Egg Indicator */}
+        {hasEasterEgg && (
+           <div className="absolute -top-2 -right-2 animate-bounce flex items-center justify-center p-1 bg-yellow-500 rounded-full shadow-lg">
+              <Sparkles className="h-4 w-4 text-white" />
+           </div>
+        )}
       </div>
 
       {/* Mode Label */}

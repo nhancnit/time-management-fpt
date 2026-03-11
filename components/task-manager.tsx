@@ -40,8 +40,10 @@ import {
   Repeat,
   Star,
 } from "lucide-react"
+import { toast } from "sonner"
 import type { Task, Subject, RecurringSchedule, TimeSlot } from "@/lib/types"
 import { storage } from "@/lib/store"
+import { supabase } from "@/lib/supabase"
 import {
   subjectStudyTimes,
   commonTimeSlots,
@@ -335,9 +337,57 @@ export function TaskManager() {
     }
   }
 
-  const toggleTaskComplete = (taskId: string) => {
+  const toggleTaskComplete = async (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId)
     if (task) {
+      if (!task.completed) {
+        // Anti-Farming Logic: Check if task was created less than 5 minutes ago
+        const createdAt = new Date(task.createdAt).getTime()
+        const now = new Date().getTime()
+        const diffMs = now - createdAt
+        
+        if (diffMs < 5 * 60 * 1000) { // 5 minutes
+          toast.error("Làm việc gì mà nhanh thế?", {
+            description: "Cần làm tối thiểu 5 phút mới nhận được F-Coins nhé!",
+            duration: 4000,
+          })
+          return // Prevent marking as complete
+        }
+
+        // Call Supabase RPC
+        try {
+          const { data, error } = await supabase.rpc('reward_task_fcoins', {
+            p_task_id: task.id,
+            p_task_type: task.type
+          })
+
+          if (error) {
+            if (error.message.includes('Task already rewarded')) {
+              toast.error("Bạn đã nhận thưởng cho công việc này rồi!")
+            } else if (error.message.includes('Not authenticated')) {
+               toast.error("Vui lòng đăng nhập lại để nhận F-Coins.")
+            } else {
+              console.error("RPC Error:", error)
+              toast.error("Lỗi khi cộng F-Coins", { description: error.message })
+            }
+          } else if (data !== null) {
+            // Success
+            const rewardAmount = task.type === 'green' ? 50 : task.type === 'yellow' ? 100 : 200
+            toast.success(`🎉 Tuyệt vời! Bạn nhận được +${rewardAmount} F-Coins`)
+            
+            // Sync local storage for optimistic UI updates elsewhere
+            const fstore = storage.getFStore()
+            fstore.fCoins = data
+            storage.setFStore(fstore)
+            
+            // Emit custom event so other components (Dashboard) can update immediately
+            window.dispatchEvent(new Event('fcoins-updated'))
+          }
+        } catch (err) {
+          console.error("Failed to reward F-Coins:", err)
+        }
+      }
+
       storage.updateTask(taskId, { completed: !task.completed })
       setTasks(storage.getTasks())
     }

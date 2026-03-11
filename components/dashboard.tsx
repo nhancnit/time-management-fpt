@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { CheckCircle2, Clock, Target, TrendingUp, Bell, Calendar, Coins } from "lucide-react"
 import type { Task, User, Subject } from "@/lib/types"
 import { storage } from "@/lib/store"
+import { supabase } from "@/lib/supabase"
 import { FrogMascot } from "@/components/frog-mascot"
 
 interface DashboardProps {
@@ -21,9 +22,55 @@ export function Dashboard({ user }: DashboardProps) {
   useEffect(() => {
     setTasks(storage.getTasks())
     setSubjects(storage.getSubjects())
-    const fstore = storage.getFStore()
-    if (fstore) {
-      setFCoins(fstore.fCoins)
+
+    const fetchCoins = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('f_coins')
+            .eq('id', session.user.id)
+            .single()
+
+          if (data && !error) {
+            setFCoins(data.f_coins || 0)
+            
+            // Sync fallback to local storage
+            const fstore = storage.getFStore()
+            fstore.fCoins = data.f_coins || 0
+            storage.setFStore(fstore)
+          } else {
+             // Fallback local if error
+            const fstore = storage.getFStore()
+            if (fstore) {
+              setFCoins(fstore.fCoins)
+            }
+          }
+        }
+      } catch (err) {
+        // Fallback local
+        const fstore = storage.getFStore()
+        if (fstore) {
+          setFCoins(fstore.fCoins)
+        }
+      }
+    }
+
+    fetchCoins()
+    
+    // Listen for custom event emitted when user gets coins in TaskManager
+    const handleCoinsUpdate = () => {
+      const fstore = storage.getFStore()
+      if (fstore) {
+        setFCoins(fstore.fCoins)
+      }
+    }
+
+    window.addEventListener('fcoins-updated', handleCoinsUpdate)
+
+    return () => {
+      window.removeEventListener('fcoins-updated', handleCoinsUpdate)
     }
   }, [])
 

@@ -153,11 +153,11 @@ export const storage = {
     storage.setFStore(fstore)
   },
 
-  checkIn: (): number => {
+  checkInAndCalculateBonus: (): { bonus: number; alreadyCheckedIn: boolean } => {
     const fstore = storage.getFStore()
     const today = new Date().toDateString()
 
-    if (fstore.lastCheckIn === today) return 0
+    if (fstore.lastCheckIn === today) return { bonus: 0, alreadyCheckedIn: true }
 
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
@@ -170,9 +170,14 @@ export const storage = {
 
     fstore.lastCheckIn = today
 
-    // Early Bird bonus: Check-in trước 7h sáng
+    // Base Check-in Reward: 20 F-Coins
+    let bonus = 20
+
+    // Early Bird bonus: Check-in trước 7h sáng (+5 F-Coins)
     const hour = new Date().getHours()
-    let bonus = hour < 7 ? 5 : 0
+    if (hour < 7) {
+       bonus += 5
+    }
 
     // Combo chăm chỉ: 3 ngày liên tiếp = 50 bonus
     if (fstore.streakDays >= 3 && fstore.streakDays % 3 === 0) {
@@ -181,7 +186,7 @@ export const storage = {
 
     fstore.fCoins += bonus
     storage.setFStore(fstore)
-    return bonus
+    return { bonus, alreadyCheckedIn: false }
   },
 
   clearAll: (): void => {

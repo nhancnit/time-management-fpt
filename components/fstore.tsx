@@ -16,11 +16,13 @@ import {
 } from "@/components/ui/dialog"
 import { Coins, ShoppingBag, Shirt, Sparkles, Hand, ImageIcon, Check, Lock, Flame, Clock, Brain } from "lucide-react"
 import { storage } from "@/lib/store"
+import { supabase } from "@/lib/supabase"
 import { FSTORE_ITEMS, SLOT_NAMES, SLOT_DESCRIPTIONS, PSYCHOLOGY_EFFECTS } from "@/lib/fstore-data"
 import type { UserFStore, FStoreItem } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { FrogMascot } from "@/components/frog-mascot"
 import type { FrogMode } from "@/lib/frog-dialogues"
+import { toast } from "sonner"
 
 const SLOT_ICONS = {
   body: Shirt,
@@ -39,6 +41,42 @@ export function FStore() {
 
   useEffect(() => {
     setFstore(storage.getFStore())
+
+    const fetchCoins = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('f_coins')
+            .eq('id', session.user.id)
+            .single()
+
+          if (data && !error) {
+            setFstore((prev) => prev ? { ...prev, fCoins: data.f_coins || 0 } : null)
+            
+            // Sync fallback
+            const fs = storage.getFStore()
+            fs.fCoins = data.f_coins || 0
+            storage.setFStore(fs)
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch f_coins", err)
+      }
+    }
+
+    fetchCoins()
+
+    const handleCoinsUpdate = () => {
+      setFstore(storage.getFStore())
+    }
+
+    window.addEventListener('fcoins-updated', handleCoinsUpdate)
+
+    return () => {
+      window.removeEventListener('fcoins-updated', handleCoinsUpdate)
+    }
   }, [])
 
   const refreshFStore = () => {
@@ -63,15 +101,56 @@ export function FStore() {
     refreshFStore()
   }
 
-  const handleCheckIn = () => {
-    const bonus = storage.checkIn()
-    if (bonus > 0) {
-      setFrogMode("slay")
-      alert(`Check-in thành công! Bạn nhận được ${bonus} F-Coins bonus!`)
-    } else {
+  const handleCheckIn = async () => {
+    const { bonus, alreadyCheckedIn } = storage.checkInAndCalculateBonus()
+
+    if (alreadyCheckedIn) {
       setFrogMode("gia_truong")
-      alert("Bạn đã check-in hôm nay rồi!")
+      toast.error("Bạn đã check-in hôm nay rồi!")
+      return
     }
+
+    if (bonus > 0) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          // Lấy số f_coins hiện tại và cộng thêm bonus
+          const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('f_coins')
+            .eq('id', session.user.id)
+            .single()
+
+          if (!fetchError && profile) {
+            const newTotal = (profile.f_coins || 0) + bonus
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ f_coins: newTotal })
+              .eq('id', session.user.id)
+
+            if (updateError) {
+              console.error("Lỗi cập nhật F-Coins lên server:", updateError)
+            } else {
+               // Update local state if supabase succeded to assure consistency
+               const fstoreToUpdate = storage.getFStore()
+               fstoreToUpdate.fCoins = newTotal
+               storage.setFStore(fstoreToUpdate)
+               
+               // Phát event để các tab khác (Dashboard) cập nhật UI realtime
+               window.dispatchEvent(new Event('fcoins-updated'))
+            }
+          }
+        }
+      } catch (err) {
+         console.error("Failed to sync check-in to server", err)
+      }
+
+      setFrogMode("slay")
+      toast.success(`🎉 Check-in thành công!`, {
+          description: `Bạn nhận được +${bonus} F-Coins. (Bao gồm +20 điểm cơ bản và các bonus khác)`
+      })
+    }
+    
     refreshFStore()
   }
 

@@ -22,6 +22,8 @@ import {
 } from "lucide-react"
 import { studyTips, subjectStudyTimes, getRecommendedTimeSlots, studyTimeResearch } from "@/lib/study-tips"
 import { storage } from "@/lib/store"
+import { supabase } from "@/lib/supabase"
+import { toast } from "sonner"
 
 const CATEGORIES = [
   { value: "all", label: "Tất cả", icon: Lightbulb },
@@ -44,6 +46,9 @@ const CATEGORY_NAMES: Record<string, string> = {
 
 export function StudyTips() {
   const [category, setCategory] = useState("all")
+  const [readingRewards, setReadingRewards] = useState<Record<string, boolean>>({})
+  const [dailyReads, setDailyReads] = useState(0)
+  
   const user = storage.getUser()
   const userSubjects = user?.subjects || []
 
@@ -62,6 +67,69 @@ export function StudyTips() {
   const relevantSubjectTimes = subjectStudyTimes.filter(
     (st) => userSubjects.some((us) => us.code === st.subjectCode) || userSubjects.length === 0,
   )
+
+  const handleReadTip = async (tipId: string) => {
+     // Check local limits first
+     const today = new Date().toDateString()
+     const storedDate = localStorage.getItem('fpt_study_read_date')
+     const storedCount = Number.parseInt(localStorage.getItem('fpt_study_read_count') || '0')
+     const readItems = JSON.parse(localStorage.getItem('fpt_study_read_items') || '{}')
+
+     let currentCount = storedCount
+     if (storedDate !== today) {
+         currentCount = 0
+         localStorage.setItem('fpt_study_read_date', today)
+         localStorage.setItem('fpt_study_read_items', '{}') // reset read items today
+     }
+
+     if (currentCount >= 3 || readItems[tipId]) {
+         return // max reached or already read this specific tip today
+     }
+
+     // Mark as reading locally
+     const newReadItems = { ...readItems, [tipId]: true }
+     localStorage.setItem('fpt_study_read_items', JSON.stringify(newReadItems))
+     
+     const newCount = currentCount + 1
+     localStorage.setItem('fpt_study_read_count', newCount.toString())
+     setDailyReads(newCount)
+     
+     // 3 F-Coins per tip
+     const bonus = 3
+
+     try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('f_coins')
+            .eq('id', session.user.id)
+            .single()
+
+          if (!fetchError && profile) {
+             const newTotal = (profile.f_coins || 0) + bonus
+             const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ f_coins: newTotal })
+              .eq('id', session.user.id)
+
+            if (!updateError) {
+               const fstoreToUpdate = storage.getFStore()
+               fstoreToUpdate.fCoins = newTotal
+               storage.setFStore(fstoreToUpdate)
+               
+               window.dispatchEvent(new Event('fcoins-updated'))
+
+               toast.success("🧠 Kiến thức là sức mạnh!", {
+                  description: `Bạn nhận được +${bonus} F-Coins vì đã chăm chỉ đọc bài. (${newCount}/3 lần hôm nay)`
+               })
+            }
+          }
+        }
+     } catch (err) {
+       console.error("Reading reward claim failed", err)
+     }
+  }
 
   return (
     <div className="space-y-6">
@@ -158,7 +226,9 @@ export function StudyTips() {
           </div>
 
           {/* Tips Accordion */}
-          <Accordion type="single" collapsible className="space-y-3">
+          <Accordion type="single" collapsible className="space-y-3" onValueChange={(value) => {
+             if (value) handleReadTip(value)
+          }}>
             {filteredTips.map((tip) => {
               const Icon = getCategoryIcon(tip.category)
               return (
