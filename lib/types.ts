@@ -112,4 +112,6 @@ export interface UserFStore {
   lastCheckIn?: string
   streakDays: number
   completedBossToday: boolean
+  currentAvatarLevel: number   // which level avatar user is currently displaying
+  unlockedLevels: number[]     // levels that have been unlocked
 }

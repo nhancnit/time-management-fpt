@@ -195,6 +195,21 @@ export const storage = {
       localStorage.removeItem(key)
     })
   },
+
+  setAvatarLevel: (level: number): void => {
+    const fstore = storage.getFStore()
+    if (fstore.unlockedLevels.includes(level)) {
+      fstore.currentAvatarLevel = level
+      storage.setFStore(fstore)
+    }
+  },
+
+  updateUnlockedLevels: (levels: number[]): void => {
+    const fstore = storage.getFStore()
+    const merged = Array.from(new Set([...fstore.unlockedLevels, ...levels]))
+    fstore.unlockedLevels = merged
+    storage.setFStore(fstore)
+  },
 }
 
 function getDefaultFStore(): UserFStore {
@@ -209,5 +224,8 @@ function getDefaultFStore(): UserFStore {
     },
     streakDays: 0,
     completedBossToday: false,
+    currentAvatarLevel: 1,
+    unlockedLevels: [1],
   }
 }
+

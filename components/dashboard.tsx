@@ -8,7 +8,9 @@ import { CheckCircle2, Clock, Target, TrendingUp, Bell, Calendar, Coins } from "
 import type { Task, User, Subject } from "@/lib/types"
 import { storage } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
-import { FrogMascot } from "@/components/frog-mascot"
+import { useFrogLevel } from "@/hooks/use-frog-level"
+import { FrogAvatarModal } from "@/components/frog-avatar-modal"
+import { LevelUpModal } from "@/components/level-up-modal"
 
 interface DashboardProps {
   user: User
@@ -18,6 +20,18 @@ export function Dashboard({ user }: DashboardProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [fCoins, setFCoins] = useState(0)
+  const [showAvatarModal, setShowAvatarModal] = useState(false)
+
+  // Frog level system
+  const {
+    currentAvatarLevel,
+    unlockedLevels,
+    avatarImage,
+    setAvatarLevel,
+    nextLevelInfo,
+    levelUpInfo,
+    dismissLevelUp,
+  } = useFrogLevel(fCoins)
 
   useEffect(() => {
     setTasks(storage.getTasks())
@@ -122,10 +136,44 @@ export function Dashboard({ user }: DashboardProps) {
 
   return (
     <div className="space-y-6">
-      {/* Welcome with Frog Mascot */}
+      {/* Level-Up Modal */}
+      <LevelUpModal levelInfo={levelUpInfo} onDismiss={dismissLevelUp} />
+
+      {/* Avatar Selection Modal */}
+      <FrogAvatarModal
+        open={showAvatarModal}
+        onOpenChange={setShowAvatarModal}
+        currentAvatarLevel={currentAvatarLevel}
+        unlockedLevels={unlockedLevels}
+        onSelectAvatar={(level) => {
+          setAvatarLevel(level)
+          setShowAvatarModal(false)
+        }}
+        nextLevelInfo={nextLevelInfo}
+        fCoins={fCoins}
+      />
+
+      {/* Welcome with Frog Avatar */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <FrogMascot size="md" showDialogue={true} />
+          {/* Frog Level Avatar - Clickable */}
+          <div
+            className="relative cursor-pointer group"
+            onClick={() => setShowAvatarModal(true)}
+            title="Click để chọn avatar Cóc"
+          >
+            <div className="w-20 h-20 rounded-full overflow-hidden border-3 border-[#F27024]/60 shadow-lg transition-all group-hover:border-[#F27024] group-hover:shadow-[0_0_20px_rgba(242,112,36,0.3)] group-hover:scale-105">
+              <img
+                src={avatarImage}
+                alt={`Cóc Level ${currentAvatarLevel}`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            {/* Level badge */}
+            <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#F27024] border-2 border-background flex items-center justify-center">
+              <span className="text-white text-xs font-bold">{currentAvatarLevel}</span>
+            </div>
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Xin chào, {user.name.split(" ").pop()}!</h1>
             <p className="text-muted-foreground">Hãy cùng có một ngày học tập hiệu quả nhé!</p>

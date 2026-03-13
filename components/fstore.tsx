@@ -20,8 +20,9 @@ import { supabase } from "@/lib/supabase"
 import { FSTORE_ITEMS, SLOT_NAMES, SLOT_DESCRIPTIONS, PSYCHOLOGY_EFFECTS } from "@/lib/fstore-data"
 import type { UserFStore, FStoreItem } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { FrogMascot } from "@/components/frog-mascot"
-import type { FrogMode } from "@/lib/frog-dialogues"
+import { useFrogLevel } from "@/hooks/use-frog-level"
+import { FrogAvatarModal } from "@/components/frog-avatar-modal"
+import { LevelUpModal } from "@/components/level-up-modal"
 import { toast } from "sonner"
 
 const SLOT_ICONS = {
@@ -33,11 +34,14 @@ const SLOT_ICONS = {
 
 export function FStore() {
   const [fstore, setFstore] = useState<UserFStore | null>(null)
-  const [activeSlot, setActiveSlot] = useState<"body" | "accessory" | "handheld" | "background">("body")
+  const [activeSlot, setActiveSlot] = useState<"background">("background")
   const [selectedItem, setSelectedItem] = useState<FStoreItem | null>(null)
   const [showBuyDialog, setShowBuyDialog] = useState(false)
   const [showInfoDialog, setShowInfoDialog] = useState(false)
-  const [frogMode, setFrogMode] = useState<FrogMode>("thanh_loc")
+  const [showAvatarModal, setShowAvatarModal] = useState(false)
+
+  // Frog level system
+  const frogLevel = useFrogLevel(fstore?.fCoins || 0)
 
   useEffect(() => {
     setFstore(storage.getFStore())
@@ -87,7 +91,6 @@ export function FStore() {
     if (!selectedItem || !fstore) return
     const success = storage.buyItem(selectedItem.id, selectedItem.price)
     if (success) {
-      setFrogMode("slay")
       refreshFStore()
       setShowBuyDialog(false)
     }
@@ -97,7 +100,6 @@ export function FStore() {
     if (!fstore) return
     if (!fstore.ownedItems.includes(item.id)) return
     storage.equipItem(item.id, item.slot)
-    setFrogMode("slay")
     refreshFStore()
   }
 
@@ -105,7 +107,6 @@ export function FStore() {
     const { bonus, alreadyCheckedIn } = storage.checkInAndCalculateBonus()
 
     if (alreadyCheckedIn) {
-      setFrogMode("gia_truong")
       toast.error("Bạn đã check-in hôm nay rồi!")
       return
     }
@@ -145,7 +146,6 @@ export function FStore() {
          console.error("Failed to sync check-in to server", err)
       }
 
-      setFrogMode("slay")
       toast.success(`🎉 Check-in thành công!`, {
           description: `Bạn nhận được +${bonus} F-Coins. (Bao gồm +20 điểm cơ bản và các bonus khác)`
       })
@@ -161,6 +161,23 @@ export function FStore() {
 
   return (
     <div className="space-y-6">
+      {/* Level-Up Modal */}
+      <LevelUpModal levelInfo={frogLevel.levelUpInfo} onDismiss={frogLevel.dismissLevelUp} />
+
+      {/* Avatar Selection Modal */}
+      <FrogAvatarModal
+        open={showAvatarModal}
+        onOpenChange={setShowAvatarModal}
+        currentAvatarLevel={frogLevel.currentAvatarLevel}
+        unlockedLevels={frogLevel.unlockedLevels}
+        onSelectAvatar={(level) => {
+          frogLevel.setAvatarLevel(level)
+          setShowAvatarModal(false)
+        }}
+        nextLevelInfo={frogLevel.nextLevelInfo}
+        fCoins={fstore.fCoins}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -248,15 +265,18 @@ export function FStore() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Character Preview with Frog Mascot */}
+        {/* Character Preview with Frog Level Avatar */}
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-lg">Chú Cóc của bạn</CardTitle>
-            <CardDescription>Click vào Cóc để tương tác!</CardDescription>
+            <CardDescription>Click vào Cóc để chọn avatar!</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col items-center">
-              <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-muted mb-4">
+              <div
+                className="relative w-full aspect-square rounded-lg overflow-hidden bg-muted mb-4 cursor-pointer group"
+                onClick={() => setShowAvatarModal(true)}
+              >
                 {/* Background */}
                 <img
                   src={
@@ -267,16 +287,28 @@ export function FStore() {
                   alt="Background"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
-                {/* Frog Mascot */}
+                {/* Frog Level Avatar */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <FrogMascot size="lg" showDialogue={true} mode={frogMode} onModeChange={setFrogMode} />
+                  <div className="relative">
+                    <div className="w-36 h-36 rounded-full overflow-hidden border-4 border-[#F27024]/60 shadow-lg transition-all group-hover:border-[#F27024] group-hover:shadow-[0_0_25px_rgba(242,112,36,0.3)] group-hover:scale-105">
+                      <img
+                        src={frogLevel.avatarImage}
+                        alt={`Cóc Level ${frogLevel.currentAvatarLevel}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    {/* Level badge */}
+                    <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[#F27024] border-2 border-background flex items-center justify-center">
+                      <span className="text-white text-sm font-bold">{frogLevel.currentAvatarLevel}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Equipped items list */}
             <div className="mt-4 space-y-2">
-              {(["body", "accessory", "handheld", "background"] as const).map((slot) => {
+              {(["background"] as const).map((slot) => {
                 const item = FSTORE_ITEMS.find((i) => i.id === fstore.equippedItems[slot])
                 const Icon = SLOT_ICONS[slot]
                 return (
@@ -301,8 +333,8 @@ export function FStore() {
           </CardHeader>
           <CardContent>
             <Tabs value={activeSlot} onValueChange={(v) => setActiveSlot(v as typeof activeSlot)}>
-              <TabsList className="grid grid-cols-4 mb-4">
-                {(["body", "accessory", "handheld", "background"] as const).map((slot) => {
+              <TabsList className="grid grid-cols-1 mb-4">
+                {(["background"] as const).map((slot) => {
                   const Icon = SLOT_ICONS[slot]
                   return (
                     <TabsTrigger key={slot} value={slot} className="flex items-center gap-1.5">
