@@ -2,6 +2,7 @@ export interface User {
   id: string
   name: string
   email: string
+  studentId?: string
   studentYear: number
   major: string
   subjects: Subject[]

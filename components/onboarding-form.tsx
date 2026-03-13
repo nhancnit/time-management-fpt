@@ -66,7 +66,9 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
     email: "",
     studentYear: "",
     major: "",
+    studentId: "",
   })
+  const [studentIdError, setStudentIdError] = useState("")
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [newSubject, setNewSubject] = useState({ name: "", code: "" })
 
@@ -143,6 +145,7 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
       id: session.user.id,
       name: formData.name,
       email: formData.email,
+      studentId: formData.studentId,
       studentYear: Number.parseInt(formData.studentYear),
       major: formData.major,
       subjects,
@@ -157,6 +160,7 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
           id: session.user.id,
           name: user.name,
           email: user.email,
+          student_id: user.studentId,
           student_year: user.studentYear,
           major: user.major,
           subjects: user.subjects,
@@ -265,6 +269,29 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
                   className="bg-secondary/50 border-border text-foreground placeholder:text-muted-foreground opacity-70"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="studentId" className="text-foreground">
+                  Mã số sinh viên
+                </Label>
+                <Input
+                  id="studentId"
+                  placeholder="Ví dụ: DE200267"
+                  value={formData.studentId}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase()
+                    setFormData({ ...formData, studentId: val })
+                    if (val && !/^[A-Z]{2}\d{6}$/.test(val)) {
+                      setStudentIdError("Mã số sinh viên không hợp lệ (VD: DE123456)")
+                    } else {
+                      setStudentIdError("")
+                    }
+                  }}
+                  className={`bg-secondary/50 border-border text-foreground placeholder:text-muted-foreground ${studentIdError ? 'border-red-500' : ''}`}
+                />
+                {studentIdError && (
+                  <p className="text-xs text-red-500 mt-1">{studentIdError}</p>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-foreground">Năm học</Label>
@@ -301,7 +328,7 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
               </div>
               <Button
                 onClick={() => setStep(2)}
-                disabled={!formData.name || !formData.email || !formData.studentYear || !formData.major}
+                disabled={!formData.name || !formData.email || !formData.studentId || studentIdError !== "" || !formData.studentYear || !formData.major}
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 Tiếp tục

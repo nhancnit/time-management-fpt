@@ -22,6 +22,7 @@ import {
 import { User, Bell, BookOpen, Trash2, Plus, X, Save } from "lucide-react"
 import type { User as UserType, Subject } from "@/lib/types"
 import { storage } from "@/lib/store"
+import { supabase } from "@/lib/supabase"
 
 const FPT_MAJORS = [
   "Công nghệ thông tin",
@@ -60,9 +61,11 @@ export function Settings({ user, onUserUpdate, onLogout }: SettingsProps) {
   const [formData, setFormData] = useState({
     name: user.name,
     email: user.email,
+    studentId: user.studentId || "",
     studentYear: user.studentYear.toString(),
     major: user.major,
   })
+  const [studentIdError, setStudentIdError] = useState("")
   const [newSubject, setNewSubject] = useState({ name: "", code: "" })
   const [notificationEnabled, setNotificationEnabled] = useState(true)
   const [saved, setSaved] = useState(false)
@@ -71,14 +74,36 @@ export function Settings({ user, onUserUpdate, onLogout }: SettingsProps) {
     setSubjects(storage.getSubjects())
   }, [])
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
+    if (studentIdError || !formData.studentId) return;
+
     const updatedUser: UserType = {
       ...user,
       name: formData.name,
       email: formData.email,
+      studentId: formData.studentId,
       studentYear: Number.parseInt(formData.studentYear),
       major: formData.major,
     }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: updatedUser.name,
+          student_id: updatedUser.studentId,
+          student_year: updatedUser.studentYear,
+          major: updatedUser.major,
+        })
+        .eq('id', user.id)
+
+      if (error) {
+         console.error("Supabase Error:", error)
+      }
+    } catch (err) {
+      console.error("Error saving profile:", err)
+    }
+
     storage.setUser(updatedUser)
     onUserUpdate(updatedUser)
     setSaved(true)
@@ -144,8 +169,29 @@ export function Settings({ user, onUserUpdate, onLogout }: SettingsProps) {
               <Input
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="bg-secondary border-border text-foreground"
+                disabled
+                className="bg-secondary/50 border-border text-foreground placeholder:text-muted-foreground opacity-70"
               />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-foreground">Mã số sinh viên</Label>
+              <Input
+                placeholder="Ví dụ: DE200267"
+                value={formData.studentId}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase()
+                  setFormData({ ...formData, studentId: val })
+                  if (val && !/^[A-Z]{2}\d{6}$/.test(val)) {
+                    setStudentIdError("Mã số sinh viên không hợp lệ (VD: DE123456)")
+                  } else {
+                    setStudentIdError("")
+                  }
+                }}
+                className={`bg-secondary border-border text-foreground ${studentIdError ? 'border-red-500' : ''}`}
+              />
+              {studentIdError && (
+                <p className="text-xs text-red-500 mt-1">{studentIdError}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label className="text-foreground">Năm học</Label>
@@ -180,7 +226,7 @@ export function Settings({ user, onUserUpdate, onLogout }: SettingsProps) {
               </Select>
             </div>
           </div>
-          <Button onClick={handleSaveProfile} className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button onClick={handleSaveProfile} disabled={studentIdError !== "" || !formData.studentId} className="bg-primary text-primary-foreground hover:bg-primary/90">
             <Save className="h-4 w-4 mr-2" />
             {saved ? "Đã lưu!" : "Lưu thay đổi"}
           </Button>
