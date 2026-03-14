@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { storage } from "@/lib/store"
 import { getLevelByCoins, getUnlockedLevels, getLevelImage, getNextLevel, FROG_LEVELS } from "@/lib/frog-levels"
 import type { FrogLevel } from "@/lib/frog-levels"
-import { fireFPTConfetti } from "@/lib/confetti"
 import { toast } from "sonner"
 
 interface UseFrogLevelReturn {
@@ -32,54 +31,69 @@ export function useFrogLevel(fCoins: number): UseFrogLevelReturn {
   const [currentAvatarLevel, setCurrentAvatarLevel] = useState(1)
   const [unlockedLevels, setUnlockedLevels] = useState<number[]>([1])
   const [levelUpInfo, setLevelUpInfo] = useState<FrogLevel | null>(null)
-  const prevMaxLevelRef = useRef<number>(1)
+  const prevMaxUnlockedRef = useRef<number>(1)
+  const isInitialMount = useRef(true)
 
   // Load state from storage on mount
   useEffect(() => {
     const fstore = storage.getFStore()
     setCurrentAvatarLevel(fstore.currentAvatarLevel || 1)
-    setUnlockedLevels(fstore.unlockedLevels || [1])
-    prevMaxLevelRef.current = getLevelByCoins(fstore.fCoins).level
+    const currentUnlocked = fstore.unlockedLevels || [1]
+    setUnlockedLevels(currentUnlocked)
+    prevMaxUnlockedRef.current = Math.max(...currentUnlocked)
   }, [])
 
   // Detect level-up when fCoins changes
   useEffect(() => {
-    if (fCoins === 0 && prevMaxLevelRef.current === 1) return // initial state, skip
-
-    const newMaxLevel = getLevelByCoins(fCoins)
-    const newUnlocked = getUnlockedLevels(fCoins)
+    const newlyReachableLevels = getUnlockedLevels(fCoins)
+    const newMaxReachable = getLevelByCoins(fCoins)
     
-    // Check if user reached a NEW level (higher than before)
-    if (newMaxLevel.level > prevMaxLevelRef.current) {
-      // Level UP! 🎉
-      setLevelUpInfo(newMaxLevel)
+    // Ngăn hiển thị pháo hoa LevelUp ngay khi vừa kéo data F-Coins từ Database (vốn thường là lần Load mới của trang)
+    if (isInitialMount.current) {
+      if (fCoins > 0) isInitialMount.current = false;
       
-      // Fire confetti
-      setTimeout(() => {
-        fireFPTConfetti()
-      }, 300)
+      // Vẫn cập nhật tiến độ Max ngầm ẩn dưới background
+      if (newMaxReachable.level > prevMaxUnlockedRef.current) {
+        setCurrentAvatarLevel(newMaxReachable.level)
+        prevMaxUnlockedRef.current = newMaxReachable.level
+        storage.updateUnlockedLevels(newlyReachableLevels)
+        storage.setAvatarLevel(newMaxReachable.level)
+        const fstore = storage.getFStore()
+        setUnlockedLevels(fstore.unlockedLevels)
+      }
+      return;
+    }
+
+    // Check if user reached a NEW level (higher than any previously unlocked)
+    if (newMaxReachable.level > prevMaxUnlockedRef.current) {
+      // Level UP! 🎉
+      setLevelUpInfo(newMaxReachable)
 
       // Show toast
       toast.success(`🎉 Chúc mừng! Cóc của bạn đã tiến hóa!`, {
-        description: `Lên level ${newMaxLevel.level}: ${newMaxLevel.name}!`,
+        description: `Lên level ${newMaxReachable.level}: ${newMaxReachable.name}!`,
         duration: 5000,
       })
 
       // Auto-update avatar to the new level
-      setCurrentAvatarLevel(newMaxLevel.level)
+      setCurrentAvatarLevel(newMaxReachable.level)
+      prevMaxUnlockedRef.current = newMaxReachable.level
       
       // Persist
+      storage.updateUnlockedLevels(newlyReachableLevels)
+      storage.setAvatarLevel(newMaxReachable.level)
+      
+      // Sync state
       const fstore = storage.getFStore()
-      fstore.currentAvatarLevel = newMaxLevel.level
-      fstore.unlockedLevels = newUnlocked
-      storage.setFStore(fstore)
+      setUnlockedLevels(fstore.unlockedLevels)
+    } else {
+      // Coins dropped or just increased naturally without hitting a new max level.
+      // We still update to grab any intermediate levels not previously unlocked (though normally sequential)
+      storage.updateUnlockedLevels(newlyReachableLevels)
+      const fstore = storage.getFStore()
+      setUnlockedLevels(fstore.unlockedLevels)
+      prevMaxUnlockedRef.current = Math.max(...fstore.unlockedLevels)
     }
-
-    prevMaxLevelRef.current = newMaxLevel.level
-    setUnlockedLevels(newUnlocked)
-
-    // Also persist updated unlocked levels even without level-up (in case coins increased)
-    storage.updateUnlockedLevels(newUnlocked)
   }, [fCoins])
 
   const currentMaxLevel = getLevelByCoins(fCoins)

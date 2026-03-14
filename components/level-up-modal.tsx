@@ -9,6 +9,9 @@ import {
 import { Button } from "@/components/ui/button"
 import type { FrogLevel } from "@/lib/frog-levels"
 import { cn } from "@/lib/utils"
+import Confetti from "react-confetti"
+import { useWindowSize } from "react-use"
+import { useState, useEffect } from "react"
 
 interface LevelUpModalProps {
   levelInfo: FrogLevel | null
@@ -16,11 +19,34 @@ interface LevelUpModalProps {
 }
 
 export function LevelUpModal({ levelInfo, onDismiss }: LevelUpModalProps) {
+  const { width, height } = useWindowSize()
+  const [showConfetti, setShowConfetti] = useState(false)
+
+  // Chỉ trigger CSS & Confetti khi có level mới mở
+  useEffect(() => {
+    if (levelInfo) {
+      setShowConfetti(true)
+      const timer = setTimeout(() => setShowConfetti(false), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [levelInfo])
+
   if (!levelInfo) return null
 
   return (
     <Dialog open={!!levelInfo} onOpenChange={(open) => !open && onDismiss()}>
-      <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-xl border-[#F27024]/30 shadow-[0_0_60px_rgba(242,112,36,0.15)]">
+      {showConfetti && (
+        <Confetti
+          width={width}
+          height={height}
+          colors={["#F27024", "#FFFFFF", "#FF8C42", "#FFD700"]}
+          numberOfPieces={400}
+          recycle={false}
+          gravity={0.15}
+          style={{ position: 'fixed', zIndex: 99999, top: 0, left: 0 }}
+        />
+      )}
+      <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-xl border-[#F27024]/30 shadow-[0_0_60px_rgba(242,112,36,0.15)] z-[100]">
         <DialogHeader className="text-center">
           <DialogTitle className="text-center text-2xl font-bold text-foreground">
             🎉 Tiến hóa thành công!

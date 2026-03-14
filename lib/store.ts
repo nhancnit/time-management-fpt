@@ -115,7 +115,13 @@ export const storage = {
   getFStore: (): UserFStore => {
     if (typeof window === "undefined") return getDefaultFStore()
     const data = localStorage.getItem(STORAGE_KEYS.FSTORE)
-    return data ? JSON.parse(data) : getDefaultFStore()
+    if (data) {
+      const parsed: UserFStore = JSON.parse(data)
+      if (!parsed.unlockedLevels) parsed.unlockedLevels = [1]
+      if (!parsed.currentAvatarLevel) parsed.currentAvatarLevel = 1
+      return parsed
+    }
+    return getDefaultFStore()
   },
 
   setFStore: (fstore: UserFStore): void => {
@@ -206,7 +212,7 @@ export const storage = {
 
   updateUnlockedLevels: (levels: number[]): void => {
     const fstore = storage.getFStore()
-    const merged = Array.from(new Set([...fstore.unlockedLevels, ...levels]))
+    const merged = Array.from(new Set([...fstore.unlockedLevels, ...levels])).sort((a,b) => a - b)
     fstore.unlockedLevels = merged
     storage.setFStore(fstore)
   },

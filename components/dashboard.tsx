@@ -11,6 +11,8 @@ import { supabase } from "@/lib/supabase"
 import { useFrogLevel } from "@/hooks/use-frog-level"
 import { FrogAvatarModal } from "@/components/frog-avatar-modal"
 import { LevelUpModal } from "@/components/level-up-modal"
+import Confetti from "react-confetti"
+import { useWindowSize } from "react-use"
 
 interface DashboardProps {
   user: User
@@ -32,6 +34,19 @@ export function Dashboard({ user }: DashboardProps) {
     levelUpInfo,
     dismissLevelUp,
   } = useFrogLevel(fCoins)
+
+  const { width, height } = useWindowSize()
+  const [showWelcomeConfetti, setShowWelcomeConfetti] = useState(false)
+
+  // Fire welcome confetti once per session when user visits the site
+  useEffect(() => {
+    const hasSeenWelcome = sessionStorage.getItem("hasSeenWelcome")
+    if (!hasSeenWelcome) {
+       setShowWelcomeConfetti(true)
+       sessionStorage.setItem("hasSeenWelcome", "true")
+       setTimeout(() => setShowWelcomeConfetti(false), 5000)
+    }
+  }, [])
 
   useEffect(() => {
     setTasks(storage.getTasks())
@@ -136,6 +151,19 @@ export function Dashboard({ user }: DashboardProps) {
 
   return (
     <div className="space-y-6">
+      {/* Welcome Confetti */}
+      {showWelcomeConfetti && (
+        <Confetti
+          width={width}
+          height={height}
+          colors={["#F27024", "#10B981", "#FF8C42", "#FFD700", "#3B82F6"]}
+          numberOfPieces={300}
+          recycle={false}
+          gravity={0.12}
+          style={{ position: 'fixed', zIndex: 99999, top: 0, left: 0 }}
+        />
+      )}
+
       {/* Level-Up Modal */}
       <LevelUpModal levelInfo={levelUpInfo} onDismiss={dismissLevelUp} />
 
