@@ -203,7 +203,7 @@ export function Dashboard({ user }: DashboardProps) {
             </div>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Xin chào, {user.name.split(" ").pop()}!</h1>
+            <h1 className="text-2xl font-bold text-foreground">Xin chào, {user.nickname || user.name.split(" ").pop()}!</h1>
             <p className="text-muted-foreground">Hãy cùng có một ngày học tập hiệu quả nhé!</p>
             <div className="flex items-center gap-2 mt-2">
               <Coins className="h-4 w-4 text-yellow-500" />

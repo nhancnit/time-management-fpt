@@ -16,6 +16,7 @@ interface LeaderboardProps {
 interface ProfileRecord {
   id: string
   name: string
+  nickname: string | null
   student_id: string
   major: string
   f_coins: number
@@ -35,7 +36,7 @@ export function Leaderboard({ user }: LeaderboardProps) {
 
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, name, student_id, major, f_coins, avatar_url')
+          .select('id, name, nickname, student_id, major, f_coins, avatar_url')
           .order('f_coins', { ascending: false, nullsFirst: false })
           .limit(20)
 
@@ -144,7 +145,7 @@ export function Leaderboard({ user }: LeaderboardProps) {
                             "font-bold truncate",
                             isCurrentUser ? "text-primary" : "text-foreground"
                           )}>
-                            {leader.name} {isCurrentUser && "(Bạn)"}
+                            {leader.nickname || leader.name} {isCurrentUser && "(Bạn)"}
                           </h3>
                           {leader.student_id && (
                             <Badge variant="outline" className="text-[10px] h-5 hidden sm:inline-flex bg-secondary">

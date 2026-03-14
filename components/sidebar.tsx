@@ -101,7 +101,7 @@ export function Sidebar({ user, activeTab, onTabChange, onLogout }: SidebarProps
                 <span className="text-primary font-semibold">{user.name.charAt(0)}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                <p className="text-sm font-medium text-foreground truncate">{user.nickname || user.name}</p>
                 <p className="text-xs text-muted-foreground truncate">{user.major}</p>
               </div>
             </div>

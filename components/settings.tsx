@@ -60,6 +60,7 @@ export function Settings({ user, onUserUpdate, onLogout }: SettingsProps) {
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [formData, setFormData] = useState({
     name: user.name,
+    nickname: user.nickname || "",
     email: user.email,
     studentId: user.studentId || "",
     studentYear: user.studentYear.toString(),
@@ -80,6 +81,7 @@ export function Settings({ user, onUserUpdate, onLogout }: SettingsProps) {
     const updatedUser: UserType = {
       ...user,
       name: formData.name,
+      nickname: formData.nickname,
       email: formData.email,
       studentId: formData.studentId,
       studentYear: Number.parseInt(formData.studentYear),
@@ -91,6 +93,7 @@ export function Settings({ user, onUserUpdate, onLogout }: SettingsProps) {
         .from('profiles')
         .update({
           name: updatedUser.name,
+          nickname: updatedUser.nickname,
           student_id: updatedUser.studentId,
           student_year: updatedUser.studentYear,
           major: updatedUser.major,
@@ -161,6 +164,15 @@ export function Settings({ user, onUserUpdate, onLogout }: SettingsProps) {
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="bg-secondary border-border text-foreground"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-foreground">Biệt danh (Tùy chọn)</Label>
+              <Input
+                placeholder="Ví dụ: Cóc chăm chỉ"
+                value={formData.nickname}
+                onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
                 className="bg-secondary border-border text-foreground"
               />
             </div>
