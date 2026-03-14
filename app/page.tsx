@@ -11,6 +11,7 @@ import { MaterialsManager } from "@/components/materials-manager"
 import { Settings } from "@/components/settings"
 import { NotificationSystem } from "@/components/notification-system"
 import { FStore } from "@/components/fstore"
+import { Leaderboard } from "@/components/leaderboard"
 import type { User } from "@/lib/types"
 import { storage } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
@@ -57,6 +58,7 @@ export default function Home() {
           {activeTab === "schedule" && <ScheduleView />}
           {activeTab === "tasks" && <TaskManager />}
           {activeTab === "fstore" && <FStore />}
+          {activeTab === "leaderboard" && <Leaderboard user={user} />}
           {activeTab === "tips" && <StudyTips />}
           {activeTab === "materials" && <MaterialsManager />}
           {activeTab === "settings" && <Settings user={user} onUserUpdate={setUser} onLogout={handleLogout} />}

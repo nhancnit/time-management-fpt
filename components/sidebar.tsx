@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   Store,
+  Trophy,
 } from "lucide-react"
 import type { User } from "@/lib/types"
 import Image from "next/image"
@@ -29,6 +30,7 @@ const menuItems = [
   { id: "dashboard", label: "Tổng quan", icon: LayoutDashboard },
   { id: "schedule", label: "Lịch học", icon: Calendar },
   { id: "tasks", label: "Công việc", icon: BookOpen },
+  { id: "leaderboard", label: "Bảng xếp hạng", icon: Trophy },
   { id: "fstore", label: "F-Store", icon: Store },
   { id: "tips", label: "Phương pháp học", icon: Lightbulb },
   { id: "materials", label: "Tài liệu", icon: FileText },

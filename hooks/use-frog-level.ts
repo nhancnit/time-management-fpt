@@ -5,6 +5,7 @@ import { storage } from "@/lib/store"
 import { getLevelByCoins, getUnlockedLevels, getLevelImage, getNextLevel, FROG_LEVELS } from "@/lib/frog-levels"
 import type { FrogLevel } from "@/lib/frog-levels"
 import { toast } from "sonner"
+import { supabase } from "@/lib/supabase"
 
 interface UseFrogLevelReturn {
   /** The highest level the user can currently reach */
@@ -60,6 +61,12 @@ export function useFrogLevel(fCoins: number): UseFrogLevelReturn {
         storage.setAvatarLevel(newMaxReachable.level)
         const fstore = storage.getFStore()
         setUnlockedLevels(fstore.unlockedLevels)
+
+        // Đồng bộ ảnh lên DB ngầm
+        const imagePath = getLevelImage(newMaxReachable.level)
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session) supabase.from("profiles").update({ avatar_url: imagePath }).eq("id", session.user.id).then()
+        })
       }
       return;
     }
@@ -83,6 +90,12 @@ export function useFrogLevel(fCoins: number): UseFrogLevelReturn {
       storage.updateUnlockedLevels(newlyReachableLevels)
       storage.setAvatarLevel(newMaxReachable.level)
       
+      // Đồng bộ ảnh lên DB
+      const imagePath = getLevelImage(newMaxReachable.level)
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) supabase.from("profiles").update({ avatar_url: imagePath }).eq("id", session.user.id).then()
+      })
+
       // Sync state
       const fstore = storage.getFStore()
       setUnlockedLevels(fstore.unlockedLevels)
@@ -104,6 +117,12 @@ export function useFrogLevel(fCoins: number): UseFrogLevelReturn {
     if (unlockedLevels.includes(level)) {
       setCurrentAvatarLevel(level)
       storage.setAvatarLevel(level)
+
+      // Cập nhật avatar_url lên Supabase
+      const imagePath = getLevelImage(level)
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) supabase.from("profiles").update({ avatar_url: imagePath }).eq("id", session.user.id).then()
+      })
     }
   }, [unlockedLevels])
 
