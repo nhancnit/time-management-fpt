@@ -12,20 +12,7 @@ export const metadata: Metadata = {
   description: "Ứng dụng quản lý thời gian và lịch học thông minh dành cho sinh viên Đại học FPT",
   generator: "v0.app",
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
+    icon: "/icon.jpg",
     apple: "/apple-icon.png",
   },
 }
