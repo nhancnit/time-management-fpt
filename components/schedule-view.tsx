@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react"
 import type { Task, Subject } from "@/lib/types"
 import { storage } from "@/lib/store"
+import { supabase } from "@/lib/supabase"
+import { toast } from "sonner"
+import { KnowledgeSummaryModal } from "@/components/knowledge-summary-modal"
 
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 6) // 6:00 - 22:00
 
@@ -13,6 +16,8 @@ export function ScheduleView() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false)
+  const [taskForSummary, setTaskForSummary] = useState<string | null>(null)
 
   useEffect(() => {
     setTasks(storage.getTasks())
@@ -67,9 +72,76 @@ export function ScheduleView() {
   const toggleTaskComplete = (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId)
     if (task) {
-      storage.updateTask(taskId, { completed: !task.completed })
-      setTasks(storage.getTasks())
+      if (!task.completed) {
+        // Anti-Farming Logic: Check if task was created less than 5 minutes ago
+        const createdAt = new Date(task.createdAt).getTime()
+        const now = new Date().getTime()
+        const diffMs = now - createdAt
+        
+        if (diffMs < 5 * 60 * 1000) { // 5 minutes
+          toast.error("Làm việc gì mà nhanh thế?", {
+            description: "Cần làm tối thiểu 5 phút mới nhận được F-Coins nhé!",
+            duration: 4000,
+          })
+          return // Prevent marking as complete
+        }
+
+        // Mở modal nhập tóm tắt kiến thức
+        setTaskForSummary(taskId)
+        setSummaryModalOpen(true)
+      } else {
+        storage.updateTask(taskId, { completed: !task.completed })
+        setTasks(storage.getTasks())
+      }
     }
+  }
+
+  const handleConfirmSummary = async (): Promise<boolean> => {
+    if (!taskForSummary) return false;
+    
+    const task = tasks.find((t) => t.id === taskForSummary)
+    if (!task) return false;
+
+    // Call Supabase RPC
+    try {
+      const { data, error } = await supabase.rpc('reward_task_fcoins', {
+        p_task_id: task.id,
+        p_task_type: task.type
+      })
+
+      if (error) {
+        if (error.message.includes('Task already rewarded')) {
+          toast.error("Bạn đã nhận thưởng cho công việc này rồi!")
+        } else if (error.message.includes('Not authenticated')) {
+           toast.error("Vui lòng đăng nhập lại để nhận F-Coins.")
+        } else {
+          console.error("RPC Error:", error)
+          toast.error("Lỗi khi cộng F-Coins", { description: error.message })
+        }
+        return false;
+      } else if (data !== null) {
+        // Success
+        const rewardAmount = task.type === 'green' ? 50 : task.type === 'yellow' ? 100 : 200
+        toast.success(`🎉 Tuyệt vời! Bạn nhận được +${rewardAmount} F-Coins`)
+        
+        // Sync local storage for optimistic UI updates elsewhere
+        const fstore = storage.getFStore()
+        fstore.fCoins = data
+        storage.setFStore(fstore)
+        
+        // Emit custom event so other components (Dashboard) can update immediately
+        window.dispatchEvent(new Event('fcoins-updated'))
+        
+        storage.updateTask(task.id, { completed: true })
+        setTasks(storage.getTasks())
+        setTaskForSummary(null)
+        return true;
+      }
+    } catch (err) {
+      console.error("Failed to reward F-Coins:", err)
+      return false;
+    }
+    return false;
   }
 
   return (
@@ -199,6 +271,12 @@ export function ScheduleView() {
           </div>
         </CardContent>
       </Card>
+
+      <KnowledgeSummaryModal
+        isOpen={summaryModalOpen}
+        onOpenChange={setSummaryModalOpen}
+        onConfirm={handleConfirmSummary}
+      />
     </div>
   )
 }

@@ -44,6 +44,7 @@ import { toast } from "sonner"
 import type { Task, Subject, RecurringSchedule, TimeSlot } from "@/lib/types"
 import { storage } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
+import { KnowledgeSummaryModal } from "@/components/knowledge-summary-modal"
 import {
   subjectStudyTimes,
   commonTimeSlots,
@@ -88,6 +89,8 @@ export function TaskManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
   const [filter, setFilter] = useState<"all" | "green" | "yellow" | "red">("all")
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false)
+  const [taskForSummary, setTaskForSummary] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     title: "",
@@ -354,43 +357,58 @@ export function TaskManager() {
           return // Prevent marking as complete
         }
 
-        // Call Supabase RPC
-        try {
-          const { data, error } = await supabase.rpc('reward_task_fcoins', {
-            p_task_id: task.id,
-            p_task_type: task.type
-          })
-
-          if (error) {
-            if (error.message.includes('Task already rewarded')) {
-              toast.error("Bạn đã nhận thưởng cho công việc này rồi!")
-            } else if (error.message.includes('Not authenticated')) {
-               toast.error("Vui lòng đăng nhập lại để nhận F-Coins.")
-            } else {
-              console.error("RPC Error:", error)
-              toast.error("Lỗi khi cộng F-Coins", { description: error.message })
-            }
-          } else if (data !== null) {
-            // Success
-            const rewardAmount = task.type === 'green' ? 50 : task.type === 'yellow' ? 100 : 200
-            toast.success(`🎉 Tuyệt vời! Bạn nhận được +${rewardAmount} F-Coins`)
-            
-            // Sync local storage for optimistic UI updates elsewhere
-            const fstore = storage.getFStore()
-            fstore.fCoins = data
-            storage.setFStore(fstore)
-            
-            // Emit custom event so other components (Dashboard) can update immediately
-            window.dispatchEvent(new Event('fcoins-updated'))
-          }
-        } catch (err) {
-          console.error("Failed to reward F-Coins:", err)
-        }
+        // Mở modal nhập tóm tắt kiến thức
+        setTaskForSummary(taskId)
+        setSummaryModalOpen(true)
+      } else {
+        storage.updateTask(taskId, { completed: !task.completed })
+        setTasks(storage.getTasks())
       }
-
-      storage.updateTask(taskId, { completed: !task.completed })
-      setTasks(storage.getTasks())
     }
+  }
+
+  const handleConfirmSummary = async (): Promise<boolean> => {
+    if (!taskForSummary) return false;
+    
+    const task = tasks.find((t) => t.id === taskForSummary)
+    if (!task) return false;
+
+    try {
+      const { data, error } = await supabase.rpc('reward_task_fcoins', {
+        p_task_id: task.id,
+        p_task_type: task.type
+      })
+
+      if (error) {
+        if (error.message.includes('Task already rewarded')) {
+          toast.error("Bạn đã nhận thưởng cho công việc này rồi!")
+        } else if (error.message.includes('Not authenticated')) {
+           toast.error("Vui lòng đăng nhập lại để nhận F-Coins.")
+        } else {
+          console.error("RPC Error:", error)
+          toast.error("Lỗi khi cộng F-Coins", { description: error.message })
+        }
+        return false;
+      } else if (data !== null) {
+        const rewardAmount = task.type === 'green' ? 50 : task.type === 'yellow' ? 100 : 200
+        toast.success(`🎉 Tuyệt vời! Bạn nhận được +${rewardAmount} F-Coins`)
+        
+        const fstore = storage.getFStore()
+        fstore.fCoins = data
+        storage.setFStore(fstore)
+        
+        window.dispatchEvent(new Event('fcoins-updated'))
+        
+        storage.updateTask(task.id, { completed: true })
+        setTasks(storage.getTasks())
+        setTaskForSummary(null)
+        return true;
+      }
+    } catch (err) {
+      console.error("Failed to reward F-Coins:", err)
+      return false;
+    }
+    return false;
   }
 
   const toggleDay = (day: number) => {
@@ -882,6 +900,12 @@ export function TaskManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <KnowledgeSummaryModal
+        isOpen={summaryModalOpen}
+        onOpenChange={setSummaryModalOpen}
+        onConfirm={handleConfirmSummary}
+      />
     </div>
   )
 }
