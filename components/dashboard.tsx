@@ -4,7 +4,7 @@ import { useMemo, useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { CheckCircle2, Clock, Target, TrendingUp, Bell, Calendar, Coins } from "lucide-react"
+import { CheckCircle2, Clock, Target, TrendingUp, Bell, Calendar, Coins, BookOpen } from "lucide-react"
 import type { Task, User, Subject } from "@/lib/types"
 import { storage } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
@@ -401,6 +401,82 @@ export function Dashboard({ user }: DashboardProps) {
                 {subject.code} - {subject.name}
               </Badge>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* User Guide */}
+      <Card className="bg-card border-border overflow-hidden mt-6">
+        <CardHeader className="bg-primary/5 border-b border-border">
+          <CardTitle className="text-foreground text-lg flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-primary" />
+            Hướng dẫn xếp lịch học tập
+          </CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Dành cho người mới bắt đầu lập kế hoạch với F-Timers
+          </p>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Steps Column 1 */}
+            <div className="space-y-6">
+              <div className="flex gap-4 items-start">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">1</div>
+                <div>
+                  <h3 className="font-semibold text-foreground mb-1">Mở bảng tạo công việc</h3>
+                  <p className="text-sm text-muted-foreground">Chuyển sang mục <strong>Công việc</strong> ở menu trái, bấm nút <strong>+ Thêm công việc</strong> màu xanh góc phải.</p>
+                </div>
+              </div>
+              
+              <div className="flex gap-4 items-start">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">2</div>
+                <div>
+                  <h3 className="font-semibold text-foreground mb-1">Điền thông tin & Môn học</h3>
+                  <p className="text-sm text-muted-foreground">Nhập tiêu đề ngắn gọn. Đặc biệt, khi bạn <strong>Nhấp chọn một môn học</strong>, hệ thống sẽ tự động quét đặc thù của môn để tiến cử khung giờ vàng.</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 items-start">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">3</div>
+                <div>
+                  <h3 className="font-semibold text-foreground mb-1">Chọn Khung giờ (Quan trọng)</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Ưu tiên click vào mục <strong>Khung giờ được đề xuất (🌟)</strong>. Đây là giờ mà não bộ phân tích logic hoặc ghi nhớ cực kỳ hiệu quả hợp với môn đó nhất.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Steps Column 2 */}
+            <div className="space-y-6">
+              <div className="flex gap-4 items-start">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">4</div>
+                <div>
+                  <h3 className="font-semibold text-foreground mb-1">Lên lịch Lặp lại</h3>
+                  <p className="text-sm text-muted-foreground">Đánh dấu vào <strong>Lặp lại hàng tuần</strong> nếu là môn học cố định định kỳ. Tích chọn các ngày trong tuần (T2, T3...) để hệ thống tự động rải lịch cho cả tháng.</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 items-start">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">5</div>
+                <div>
+                  <h3 className="font-semibold text-foreground mb-1">Chọn Nhóm màu Ưu tiên</h3>
+                  <ul className="text-sm text-muted-foreground space-y-2 mt-1">
+                    <li className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[var(--color-task-green)] shrink-0" /> <span><strong>Xanh (50 F-Coins):</strong> Việc nhỏ, làm/học hàng ngày.</span></li>
+                    <li className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[var(--color-task-yellow)] shrink-0" /> <span><strong>Vàng (100 F-Coins):</strong> Việc khó hơn, giới hạn 1 việc/ngày.</span></li>
+                    <li className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[var(--color-task-red)] shrink-0" /> <span><strong>Đỏ (200 F-Coins):</strong> Căng thẳng cực độ (Đồ án...). Chỉ 1 việc/tuần.</span></li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex gap-4 items-start">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">6</div>
+                <div>
+                  <h3 className="font-semibold text-foreground mb-1">Nhận F-Coins nâng cấp</h3>
+                  <p className="text-sm text-muted-foreground">Đến giờ học, hãy học ít nhất 5 phút rồi ấn <strong>Hoàn thành</strong>. Sau đó viết một đoạn Tóm tắt kiến thức để kích hoạt mưa pháo hoa và nhận F-Coins thưởng nhé!</p>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
