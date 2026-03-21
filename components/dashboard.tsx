@@ -4,7 +4,7 @@ import { useMemo, useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { CheckCircle2, Clock, Target, TrendingUp, Bell, Calendar, Coins, BookOpen } from "lucide-react"
+import { CheckCircle2, Clock, Target, TrendingUp, Bell, Calendar, Coins, BookOpen, Rocket } from "lucide-react"
 import type { Task, User, Subject } from "@/lib/types"
 import { storage } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
@@ -478,6 +478,24 @@ export function Dashboard({ user }: DashboardProps) {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Development & Goals */}
+      <Card className="bg-card border-border mt-6">
+        <CardHeader>
+          <CardTitle className="text-foreground text-lg flex items-center gap-2">
+            <Rocket className="h-5 w-5 text-primary" />
+            Phát triển
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed">
+          <p>
+            Mục tiêu của website F-Timers là hỗ trợ sinh viên năm nhất quản lý thời gian học tập một cách hiệu quả hơn, từ đó giảm căng thẳng và nâng cao kết quả học tập. Nền tảng hướng đến việc giúp người dùng xây dựng thói quen học tập khoa học thông qua các phương pháp như lập kế hoạch (time blocking) và sắp xếp lịch phù hợp với nhịp sinh học cá nhân.
+          </p>
+          <p>
+            Bên cạnh đó, website còn tích hợp các yếu tố gamification nhằm tăng động lực và sự hứng thú khi sử dụng, đồng thời cung cấp một không gian tập trung để quản lý tài liệu và nhiệm vụ học tập. Qua đó, F-Timers góp phần phát triển kỹ năng tự quản lý (self-regulation) bền vững cho sinh viên trong môi trường học tập hiện đại.
+          </p>
         </CardContent>
       </Card>
     </div>

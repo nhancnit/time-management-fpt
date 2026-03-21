@@ -63,6 +63,8 @@ export interface StudyTip {
   id: string
   title: string
   content: string
+  imageUrl?: string
+  imageUrls?: string[]
   category:
     | "pomodoro"
     | "active-recall"

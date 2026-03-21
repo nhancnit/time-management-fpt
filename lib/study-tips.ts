@@ -16,6 +16,7 @@ export const studyTips: StudyTip[] = [
 - Giảm mệt mỏi tinh thần
 - Dễ dàng theo dõi tiến độ`,
     category: "pomodoro",
+    imageUrl: "/image-method/promodo.jpg",
   },
   {
     id: "2",
@@ -33,6 +34,7 @@ export const studyTips: StudyTip[] = [
 - Dạy lại cho người khác
 - Làm bài tập không nhìn đáp án`,
     category: "active-recall",
+    imageUrl: "/image-method/active-recall.jpg",
   },
   {
     id: "3",
@@ -52,6 +54,10 @@ export const studyTips: StudyTip[] = [
 - Quizlet
 - Notion với reminder`,
     category: "spaced-repetition",
+    imageUrls: [
+      "/image-method/spaced-repeation.jpg",
+      "/image-method/space-repeation2.jpg"
+    ]
   },
   {
     id: "4",
@@ -72,6 +78,10 @@ export const studyTips: StudyTip[] = [
 - Tạo momentum làm việc
 - Giảm căng thẳng`,
     category: "time-management",
+    imageUrls: [
+      "/image-method/quy-tac-2-phut.jpg",
+      "/image-method/quy-tac-2-phut2.jpg"
+    ]
   },
   {
     id: "5",
@@ -89,6 +99,7 @@ export const studyTips: StudyTip[] = [
 - Ghi nhớ lâu hơn
 - Có thể giải thích cho bất kỳ ai`,
     category: "active-recall",
+    imageUrl: "/image-method/feyman.jpg",
   },
   {
     id: "6",
@@ -111,6 +122,7 @@ export const studyTips: StudyTip[] = [
 - White noise/Brown noise
 - Hoặc không gian hoàn toàn yên tĩnh`,
     category: "focus",
+    imageUrl: "/image-method/moi-truong-hoc-toi-uu.jpg"
   },
   {
     id: "7",

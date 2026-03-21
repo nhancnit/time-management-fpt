@@ -249,48 +249,68 @@ export function StudyTips() {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="px-4 pb-4">
-                    <div className="prose prose-sm prose-invert max-w-none">
-                      {tip.content.split("\n").map((line, i) => {
-                        if (line.startsWith("**") && line.endsWith("**")) {
+                    <div className="flex flex-col md:flex-row gap-6 pt-2">
+                      {/* Cột trái: Text */}
+                      <div className={`prose prose-sm prose-invert max-w-none ${tip.imageUrl || (tip.imageUrls && tip.imageUrls.length > 0) ? 'md:w-[65%]' : 'w-full'}`}>
+                        {tip.content.split("\n").map((line, i) => {
+                          const formatLine = (text: string) => text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          
+                          if (line.startsWith("**") && line.endsWith("**")) {
+                            return (
+                              <h4 key={i} className="text-foreground font-semibold mt-4 mb-2">
+                                {line.replace(/\*\*/g, "")}
+                              </h4>
+                            )
+                          }
+                          if (line.startsWith(">")) {
+                            return (
+                              <blockquote
+                                key={i}
+                                className="border-l-2 border-primary pl-4 italic text-muted-foreground my-2"
+                              >
+                                {line.replace("> ", "")}
+                              </blockquote>
+                            )
+                          }
+                          if (line.startsWith("- ")) {
+                            return (
+                              <li key={i} className="text-muted-foreground ml-4" dangerouslySetInnerHTML={{ __html: formatLine(line.replace("- ", "")) }} />
+                            )
+                          }
+                          if (line.match(/^\d+\./)) {
+                            return (
+                              <li key={i} className="text-muted-foreground ml-4 list-decimal" dangerouslySetInnerHTML={{ __html: formatLine(line.replace(/^\d+\.\s*/, "")) }} />
+                            )
+                          }
+                          if (line.trim() === "") {
+                            return <br key={i} />
+                          }
                           return (
-                            <h4 key={i} className="text-foreground font-semibold mt-4 mb-2">
-                              {line.replace(/\*\*/g, "")}
-                            </h4>
+                            <p key={i} className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: formatLine(line) }} />
                           )
-                        }
-                        if (line.startsWith(">")) {
-                          return (
-                            <blockquote
-                              key={i}
-                              className="border-l-2 border-primary pl-4 italic text-muted-foreground my-2"
-                            >
-                              {line.replace("> ", "")}
-                            </blockquote>
-                          )
-                        }
-                        if (line.startsWith("- ")) {
-                          return (
-                            <li key={i} className="text-muted-foreground ml-4">
-                              {line.replace("- ", "")}
-                            </li>
-                          )
-                        }
-                        if (line.match(/^\d+\./)) {
-                          return (
-                            <li key={i} className="text-muted-foreground ml-4 list-decimal">
-                              {line.replace(/^\d+\.\s*/, "")}
-                            </li>
-                          )
-                        }
-                        if (line.trim() === "") {
-                          return <br key={i} />
-                        }
-                        return (
-                          <p key={i} className="text-muted-foreground">
-                            {line.replace(/\*\*(.*?)\*\*/g, "$1")}
-                          </p>
-                        )
-                      })}
+                        })}
+                      </div>
+
+                      {/* Cột phải: Image */}
+                      {(tip.imageUrl || (tip.imageUrls && tip.imageUrls.length > 0)) && (
+                        <div className="w-full md:w-[35%] flex-shrink-0 flex flex-col gap-4">
+                          {tip.imageUrl && (
+                            <img
+                              src={tip.imageUrl}
+                              alt={tip.title}
+                              className="w-full h-auto rounded-lg shadow-md object-cover"
+                            />
+                          )}
+                          {tip.imageUrls?.map((imgUrl, imgIdx) => (
+                            <img
+                              key={imgIdx}
+                              src={imgUrl}
+                              alt={`${tip.title} ${imgIdx + 1}`}
+                              className="w-full h-auto rounded-lg shadow-md object-cover"
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
